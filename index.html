@@ -1,0 +1,605 @@
+import React, { useState } from 'react';
+import { Plus, Trash2, Database } from 'lucide-react';
+
+const GraphCalculator = () => {
+  const [points, setPoints] = useState([
+    { id: 1, x: '', y: '' },
+    { id: 2, x: '', y: '' },
+    { id: 3, x: '', y: '' },
+    { id: 4, x: '', y: '' },
+    { id: 5, x: '', y: '' }
+  ]);
+  const [showPoints, setShowPoints] = useState(false);
+  const [showTrendLine, setShowTrendLine] = useState(false);
+  const [predictMode, setPredictMode] = useState(false);
+  const [predictInput, setPredictInput] = useState('');
+  const [predictType, setPredictType] = useState('x'); // 'x' or 'y'
+  const [predictResult, setPredictResult] = useState(null);
+
+  const addPoint = () => {
+    const newId = Math.max(...points.map(p => p.id)) + 1;
+    setPoints([...points, { id: newId, x: '', y: '' }]);
+  };
+
+  const removePoint = (id) => {
+    if (points.length > 1) {
+      setPoints(points.filter(p => p.id !== id));
+    }
+  };
+
+  const updatePoint = (id, field, value) => {
+    setPoints(points.map(p => 
+      p.id === id ? { ...p, [field]: value } : p
+    ));
+  };
+
+  const loadSampleData = () => {
+    const sampleDataSets = [
+      // 선형 증가 데이터
+      [
+        { id: 1, x: '1', y: '2' },
+        { id: 2, x: '2', y: '4' },
+        { id: 3, x: '3', y: '6' },
+        { id: 4, x: '4', y: '8' },
+        { id: 5, x: '5', y: '10' }
+      ],
+      // 이차함수형 데이터
+      [
+        { id: 1, x: '1', y: '1' },
+        { id: 2, x: '2', y: '4' },
+        { id: 3, x: '3', y: '9' },
+        { id: 4, x: '4', y: '16' },
+        { id: 5, x: '5', y: '25' }
+      ],
+      // 실제적인 데이터 (온도와 아이스크림 판매량)
+      [
+        { id: 1, x: '20', y: '50' },
+        { id: 2, x: '25', y: '80' },
+        { id: 3, x: '30', y: '120' },
+        { id: 4, x: '35', y: '150' },
+        { id: 5, x: '40', y: '200' }
+      ]
+    ];
+    
+    const randomIndex = Math.floor(Math.random() * sampleDataSets.length);
+    setPoints(sampleDataSets[randomIndex]);
+    
+    // 예시 데이터 로드 시 자동으로 그래프 표시
+    setShowPoints(true);
+    setPredictMode(false);
+    setPredictResult(null);
+  };
+
+  const getValidPoints = () => {
+    return points
+      .filter(p => p.x !== '' && p.y !== '' && !isNaN(p.x) && !isNaN(p.y))
+      .map(p => ({ x: parseFloat(p.x), y: parseFloat(p.y) }));
+  };
+
+  const calculateTrendLine = (validPoints) => {
+    if (validPoints.length < 2) return null;
+    
+    const n = validPoints.length;
+    const sumX = validPoints.reduce((sum, p) => sum + p.x, 0);
+    const sumY = validPoints.reduce((sum, p) => sum + p.y, 0);
+    const sumXY = validPoints.reduce((sum, p) => sum + p.x * p.y, 0);
+    const sumXX = validPoints.reduce((sum, p) => sum + p.x * p.x, 0);
+    
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+    
+    return { slope, intercept };
+  };
+
+  const handlePredict = () => {
+    const validPoints = getValidPoints();
+    if (validPoints.length < 2) {
+      alert('추세선을 그리려면 최소 2개의 유효한 점이 필요합니다.');
+      return;
+    }
+    
+    const inputValue = parseFloat(predictInput);
+    if (isNaN(inputValue)) {
+      alert('유효한 숫자를 입력해주세요.');
+      return;
+    }
+    
+    const trendLine = calculateTrendLine(validPoints);
+    if (!trendLine) return;
+    
+    let result;
+    if (predictType === 'x') {
+      // x 값이 주어졌을 때 y 값 구하기
+      const y = trendLine.slope * inputValue + trendLine.intercept;
+      result = { x: inputValue, y };
+    } else {
+      // y 값이 주어졌을 때 x 값 구하기
+      const x = (inputValue - trendLine.intercept) / trendLine.slope;
+      result = { x, y: inputValue };
+    }
+    
+    setPredictResult(result);
+    setShowTrendLine(true);
+  };
+
+  const renderGraph = () => {
+    const validPoints = getValidPoints();
+    if (validPoints.length === 0) {
+      return (
+        <div className="flex items-center justify-center w-full h-96 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg">
+          <div className="text-center text-gray-500">
+            <p className="text-lg mb-2">좌표를 입력하고</p>
+            <p className="text-lg">[값 표시하기] 버튼을 클릭하세요</p>
+          </div>
+        </div>
+      );
+    }
+    
+    // 좌표 범위 계산
+    const xValues = validPoints.map(p => p.x);
+    const yValues = validPoints.map(p => p.y);
+    let minX = Math.min(...xValues);
+    let maxX = Math.max(...xValues);
+    let minY = Math.min(...yValues);
+    let maxY = Math.max(...yValues);
+    
+    // 예측 결과가 있으면 범위에 포함
+    if (predictResult) {
+      minX = Math.min(minX, predictResult.x);
+      maxX = Math.max(maxX, predictResult.x);
+      minY = Math.min(minY, predictResult.y);
+      maxY = Math.max(maxY, predictResult.y);
+    }
+    
+    // 범위에 여백 추가
+    const xRange = maxX - minX || 10;
+    const yRange = maxY - minY || 10;
+    const xPadding = xRange * 0.1;
+    const yPadding = yRange * 0.1;
+    
+    minX -= xPadding;
+    maxX += xPadding;
+    minY -= yPadding;
+    maxY += yPadding;
+    
+    const width = 600;
+    const height = 450;
+    const padding = 60;
+    const graphWidth = width - 2 * padding;
+    const graphHeight = height - 2 * padding;
+    
+    // 좌표 변환 함수
+    const toSvgX = (x) => padding + ((x - minX) / (maxX - minX)) * graphWidth;
+    const toSvgY = (y) => height - padding - ((y - minY) / (maxY - minY)) * graphHeight;
+    
+    // 격자선 생성
+    const gridLines = [];
+    const numGridLines = 10;
+    
+    // 세로 격자선
+    for (let i = 0; i <= numGridLines; i++) {
+      const x = padding + (i / numGridLines) * graphWidth;
+      gridLines.push(
+        <line
+          key={`v-grid-${i}`}
+          x1={x}
+          y1={padding}
+          x2={x}
+          y2={height - padding}
+          stroke="#e5e5e5"
+          strokeWidth="1"
+        />
+      );
+    }
+    
+    // 가로 격자선
+    for (let i = 0; i <= numGridLines; i++) {
+      const y = padding + (i / numGridLines) * graphHeight;
+      gridLines.push(
+        <line
+          key={`h-grid-${i}`}
+          x1={padding}
+          y1={y}
+          x2={width - padding}
+          y2={y}
+          stroke="#e5e5e5"
+          strokeWidth="1"
+        />
+      );
+    }
+    
+    // 축 레이블 생성
+    const axisLabels = [];
+    
+    // X축 레이블
+    for (let i = 0; i <= 5; i++) {
+      const x = padding + (i / 5) * graphWidth;
+      const value = minX + (i / 5) * (maxX - minX);
+      axisLabels.push(
+        <text
+          key={`x-label-${i}`}
+          x={x}
+          y={height - padding + 25}
+          textAnchor="middle"
+          fontSize="12"
+          fill="#666"
+        >
+          {value.toFixed(1)}
+        </text>
+      );
+    }
+    
+    // Y축 레이블
+    for (let i = 0; i <= 5; i++) {
+      const y = height - padding - (i / 5) * graphHeight;
+      const value = minY + (i / 5) * (maxY - minY);
+      axisLabels.push(
+        <text
+          key={`y-label-${i}`}
+          x={padding - 15}
+          y={y + 4}
+          textAnchor="end"
+          fontSize="12"
+          fill="#666"
+        >
+          {value.toFixed(1)}
+        </text>
+      );
+    }
+    
+    // 추세선 계산
+    let trendLineElement = null;
+    let equationElement = null;
+    if (showTrendLine && validPoints.length >= 2) {
+      const trendLine = calculateTrendLine(validPoints);
+      if (trendLine) {
+        const startX = minX;
+        const endX = maxX;
+        const startY = trendLine.slope * startX + trendLine.intercept;
+        const endY = trendLine.slope * endX + trendLine.intercept;
+        
+        trendLineElement = (
+          <line
+            x1={toSvgX(startX)}
+            y1={toSvgY(startY)}
+            x2={toSvgX(endX)}
+            y2={toSvgY(endY)}
+            stroke="#dc2626"
+            strokeWidth="2"
+          />
+        );
+        
+        equationElement = (
+          <text
+            x={padding + 10}
+            y={padding + 20}
+            fontSize="14"
+            fill="#dc2626"
+            fontWeight="bold"
+          >
+            y = {trendLine.slope.toFixed(2)}x + {trendLine.intercept.toFixed(2)}
+          </text>
+        );
+      }
+    }
+    
+    return (
+      <svg
+        width={width}
+        height={height}
+        className="w-full max-w-4xl border border-gray-300 rounded-lg bg-white"
+        style={{ maxWidth: '600px' }}
+      >
+        {/* 격자선 */}
+        {gridLines}
+        
+        {/* 축 */}
+        <line
+          x1={padding}
+          y1={padding}
+          x2={padding}
+          y2={height - padding}
+          stroke="#333"
+          strokeWidth="2"
+        />
+        <line
+          x1={padding}
+          y1={height - padding}
+          x2={width - padding}
+          y2={height - padding}
+          stroke="#333"
+          strokeWidth="2"
+        />
+        
+        {/* 축 레이블 */}
+        {axisLabels}
+        
+        {/* 축 제목 */}
+        <text
+          x={width / 2}
+          y={height - 10}
+          textAnchor="middle"
+          fontSize="14"
+          fill="#333"
+          fontWeight="bold"
+        >
+          X
+        </text>
+        <text
+          x={15}
+          y={height / 2}
+          textAnchor="middle"
+          fontSize="14"
+          fill="#333"
+          fontWeight="bold"
+          transform={`rotate(-90 15 ${height / 2})`}
+        >
+          Y
+        </text>
+        
+        {/* 추세선 */}
+        {trendLineElement}
+        
+        {/* 데이터 포인트 */}
+        {showPoints && validPoints.map((point, index) => (
+          <g key={`point-${index}`}>
+            <circle
+              cx={toSvgX(point.x)}
+              cy={toSvgY(point.y)}
+              r="6"
+              fill="#2563eb"
+            />
+            <text
+              x={toSvgX(point.x)}
+              y={toSvgY(point.y) - 12}
+              textAnchor="middle"
+              fontSize="10"
+              fill="#333"
+              fontWeight="bold"
+            >
+              ({point.x}, {point.y})
+            </text>
+          </g>
+        ))}
+        
+        {/* 예측 점 */}
+        {predictResult && (
+          <g>
+            <circle
+              cx={toSvgX(predictResult.x)}
+              cy={toSvgY(predictResult.y)}
+              r="8"
+              fill="#16a34a"
+            />
+            <text
+              x={toSvgX(predictResult.x)}
+              y={toSvgY(predictResult.y) - 15}
+              textAnchor="middle"
+              fontSize="12"
+              fill="#16a34a"
+              fontWeight="bold"
+            >
+              예측: ({predictResult.x}, {predictResult.y.toFixed(2)})
+            </text>
+          </g>
+        )}
+        
+        {/* 방정식 표시 */}
+        {equationElement}
+      </svg>
+    );
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto p-6 bg-white">
+      <h1 className="text-3xl font-bold text-center mb-8">좌표 그래프 계산기</h1>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* 입력 섹션 */}
+        <div className="space-y-6">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">좌표 입력</h2>
+              <button
+                onClick={loadSampleData}
+                className="flex items-center space-x-2 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 font-medium"
+              >
+                <Database size={16} />
+                <span>예시 데이터</span>
+              </button>
+            </div>
+            <div className="space-y-3">
+              {points.map((point) => (
+                <div key={point.id} className="flex items-center space-x-2">
+                  <span className="w-8 text-sm text-gray-500">#{point.id}</span>
+                  <input
+                    type="number"
+                    placeholder="x"
+                    value={point.x}
+                    onChange={(e) => updatePoint(point.id, 'x', e.target.value)}
+                    className="w-20 px-2 py-1 border rounded"
+                  />
+                  <span>,</span>
+                  <input
+                    type="number"
+                    placeholder="y"
+                    value={point.y}
+                    onChange={(e) => updatePoint(point.id, 'y', e.target.value)}
+                    className="w-20 px-2 py-1 border rounded"
+                  />
+                  {points.length > 1 && (
+                    <button
+                      onClick={() => removePoint(point.id)}
+                      className="p-1 text-red-600 hover:bg-red-50 rounded"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <button
+              onClick={addPoint}
+              className="mt-3 flex items-center space-x-2 px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+            >
+              <Plus size={16} />
+              <span>좌표 추가</span>
+            </button>
+          </div>
+          
+          {/* 컨트롤 버튼들 */}
+          <div className="space-y-3">
+            <button
+              onClick={() => {
+                setShowPoints(!showPoints);
+                if (!showPoints) {
+                  setShowTrendLine(false);
+                  setPredictResult(null);
+                }
+              }}
+              className={`w-full py-2 px-4 rounded font-medium ${
+                showPoints 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              값 표시하기
+            </button>
+            
+            <button
+              onClick={() => {
+                const validPoints = getValidPoints();
+                if (validPoints.length < 2) {
+                  alert('추세선을 그리려면 최소 2개의 유효한 점이 필요합니다.');
+                  return;
+                }
+                setShowTrendLine(!showTrendLine);
+                if (!showTrendLine) {
+                  setShowPoints(true);
+                }
+              }}
+              disabled={!showPoints}
+              className={`w-full py-2 px-4 rounded font-medium ${
+                showTrendLine 
+                  ? 'bg-red-600 text-white' 
+                  : showPoints
+                    ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              그래프 그리기
+            </button>
+            
+            <button
+              onClick={() => {
+                const validPoints = getValidPoints();
+                if (validPoints.length < 2) {
+                  alert('값을 예측하려면 최소 2개의 유효한 점이 필요합니다.');
+                  return;
+                }
+                setPredictMode(!predictMode);
+                setPredictResult(null);
+              }}
+              disabled={!showPoints}
+              className={`w-full py-2 px-4 rounded font-medium ${
+                predictMode 
+                  ? 'bg-green-600 text-white' 
+                  : showPoints
+                    ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              원하는 값 구하기
+            </button>
+          </div>
+          
+          {/* 예측 입력 */}
+          {predictMode && (
+            <div className="border-t pt-4 space-y-3">
+              <h3 className="font-medium">값 예측</h3>
+              <div className="space-y-2">
+                <div className="flex space-x-4">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="x"
+                      checked={predictType === 'x'}
+                      onChange={(e) => setPredictType(e.target.value)}
+                      className="mr-2"
+                    />
+                    X 값으로 Y 구하기
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="y"
+                      checked={predictType === 'y'}
+                      onChange={(e) => setPredictType(e.target.value)}
+                      className="mr-2"
+                    />
+                    Y 값으로 X 구하기
+                  </label>
+                </div>
+                
+                <div className="flex space-x-2">
+                  <input
+                    type="number"
+                    placeholder={`${predictType.toUpperCase()} 값 입력`}
+                    value={predictInput}
+                    onChange={(e) => setPredictInput(e.target.value)}
+                    className="flex-1 px-3 py-2 border rounded"
+                  />
+                  <button
+                    onClick={handlePredict}
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                  >
+                    계산
+                  </button>
+                </div>
+                
+                {predictResult && (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded">
+                    <p className="text-green-800">
+                      예측 결과: {predictType === 'x' ? 'Y' : 'X'} = {
+                        predictType === 'x' 
+                          ? predictResult.y.toFixed(2)
+                          : predictResult.x.toFixed(2)
+                      }
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* 그래프 섹션 */}
+        <div>
+          <h2 className="text-xl font-semibold mb-4">그래프</h2>
+          <div className="flex justify-center">
+            {renderGraph()}
+          </div>
+          
+          {/* 범례 */}
+          <div className="mt-4 flex flex-wrap gap-4 text-sm justify-center">
+            <div className="flex items-center">
+              <div className="w-4 h-4 bg-blue-600 rounded-full mr-2"></div>
+              <span>입력된 점</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-4 h-1 bg-red-600 mr-2"></div>
+              <span>추세선</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-4 h-4 bg-green-600 rounded-full mr-2"></div>
+              <span>예측 점</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default GraphCalculator;
