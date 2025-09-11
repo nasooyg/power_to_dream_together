@@ -781,7 +781,7 @@
             xTitle.setAttribute('font-size', '14');
             xTitle.setAttribute('fill', '#333');
             xTitle.setAttribute('font-weight', 'bold');
-            xTitle.textContent = 'X';
+            xTitle.textContent = 'X(기온)';
             graph.appendChild(xTitle);
             
             const yTitle = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -792,7 +792,7 @@
             yTitle.setAttribute('fill', '#333');
             yTitle.setAttribute('font-weight', 'bold');
             yTitle.setAttribute('transform', `rotate(-90 15 ${height / 2})`);
-            yTitle.textContent = 'Y';
+            yTitle.textContent = 'Y(전력량)';
             graph.appendChild(yTitle);
             
             // 추세선 그리기
