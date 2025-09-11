@@ -817,4 +817,58 @@
                     const equation = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                     equation.setAttribute('x', padding + 10);
                     equation.setAttribute('y', padding + 20);
-                    equation.setAttribute('font-size', '
+                    equation.setAttribute('font-size', '14');
+                    equation.setAttribute('fill', '#dc2626');
+                    equation.setAttribute('font-weight', 'bold');
+                    equation.textContent = `y = ${trendLine.slope.toFixed(2)}x + ${trendLine.intercept.toFixed(2)}`;
+                    graph.appendChild(equation);
+                }
+            }
+            
+            // 데이터 포인트 그리기
+            if (showPoints) {
+                validPoints.forEach((point, index) => {
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', toSvgX(point.x));
+                    circle.setAttribute('cy', toSvgY(point.y));
+                    circle.setAttribute('r', '6');
+                    circle.setAttribute('fill', '#2563eb');
+                    graph.appendChild(circle);
+                    
+                    // 포인트 레이블
+                    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    label.setAttribute('x', toSvgX(point.x));
+                    label.setAttribute('y', toSvgY(point.y) - 12);
+                    label.setAttribute('text-anchor', 'middle');
+                    label.setAttribute('font-size', '10');
+                    label.setAttribute('fill', '#333');
+                    label.setAttribute('font-weight', 'bold');
+                    label.textContent = `(${point.x}, ${point.y})`;
+                    graph.appendChild(label);
+                });
+            }
+            
+            // 예측 점 그리기
+            if (predictResult) {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', toSvgX(predictResult.x));
+                circle.setAttribute('cy', toSvgY(predictResult.y));
+                circle.setAttribute('r', '8');
+                circle.setAttribute('fill', '#16a34a');
+                graph.appendChild(circle);
+                
+                // 예측 점 레이블
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', toSvgX(predictResult.x));
+                label.setAttribute('y', toSvgY(predictResult.y) - 15);
+                label.setAttribute('text-anchor', 'middle');
+                label.setAttribute('font-size', '12');
+                label.setAttribute('fill', '#16a34a');
+                label.setAttribute('font-weight', 'bold');
+                label.textContent = `예측: (${predictResult.x}, ${predictResult.y.toFixed(2)})`;
+                graph.appendChild(label);
+            }
+        }
+    </script>
+</body>
+</html>
